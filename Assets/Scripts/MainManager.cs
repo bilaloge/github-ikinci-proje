@@ -1,6 +1,8 @@
 using JetBrains.Annotations;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -12,6 +14,7 @@ public class MainManager : MonoBehaviour
     public Rigidbody Ball;
 
     public Text ScoreText;
+    public Text ScoreName;
     public GameObject GameOverText;
     
     private bool m_Started = false;
@@ -19,7 +22,11 @@ public class MainManager : MonoBehaviour
     
     private bool m_GameOver = false;
 
-    
+    public string playerName;
+    private string l_Name;
+    private int l_Points;
+
+
     // Start is called before the first frame update
     void Start()
     {
@@ -37,8 +44,20 @@ public class MainManager : MonoBehaviour
                 brick.onDestroyed.AddListener(AddPoint);
             }
         }
+        if (StartMenu.Instance != null)
+        {
+            playerName = StartMenu.Instance.playerName;
+        }
+        LoadPoint();
+        if (l_Points > m_Points)
+        {
+            ScoreName.text = "Best Score  : " + l_Name +" : " + l_Points;
+        }
+        else
+        {
+            ScoreName.text = "Best Score  : " + playerName + " : " + m_Points;
+        }
     }
-
     private void Update()
     {
         if (!m_Started)
@@ -62,22 +81,44 @@ public class MainManager : MonoBehaviour
             }
         }
     }
-
-    void AddPoint(int point)
-    {
-        m_Points += point;
-        ScoreText.text = $"Score : {m_Points}";
-    }
-
-    public void GameOver()
-    {
-        m_GameOver = true;
-        GameOverText.SetActive(true);
-    }
+    [System.Serializable]
     public class SaveData
     {
         public int m_Points;
+        public string m_Name;
+    }
+    public void SavePoint()
+    {
+        SaveData data = new SaveData();
+        data.m_Points = m_Points;
+        data.m_Name = playerName;
 
-
+        string json = JsonUtility.ToJson(data);
+        File.WriteAllText(Application.persistentDataPath + "/savefile.Json", json);
+    }
+    public void LoadPoint()
+    {
+        string path = Application.persistentDataPath + "/savefile.Json";
+        if (File.Exists(path))
+        {
+            string json = File.ReadAllText(path);
+            SaveData data = JsonUtility.FromJson<SaveData>(json);
+            l_Points = data.m_Points;
+            l_Name = data.m_Name;
+        }
+    }
+    void AddPoint(int point)
+    {
+        m_Points += point;
+        ScoreText.text = "Score :" + m_Points;
+    }
+    public void GameOver()
+    {
+        if (m_Points > l_Points)
+        {
+            SavePoint();
+        }
+        m_GameOver = true;
+        GameOverText.SetActive(true);
     }
 }
